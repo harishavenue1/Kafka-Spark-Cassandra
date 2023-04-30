@@ -1,0 +1,261 @@
+PreRequisites
+spark-2.1.1-bin-hadoop2.7
+apache-cassandra-3.11
+kafka_2.11-0.9.0.0
+Java 1.8
+
+
+--PreRun
+sudo apt-add-repository universe
+sudo apt update
+
+
+1)
+Install Java 1.8
+sudo apt-get install openjdk-8-jdk
+
+-- if old version is instaled, then replace it with this
+sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
+
+-- Also in .bashrc file replace java home
+vi .bashrc
+
+-- get into insert mode by pressing 'i' key
+-- update java home to above value
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+
+-- press quit key
+-- type :wq!
+
+-- set source to .bashrc
+source .bashrc
+
+then verify java -version
+
+
+
+2)  
+Install Python 2.7
+
+sudo apt-add-repository universe
+sudo apt update
+sudo apt install python2-minimal
+python2 -V
+
+3)
+Hadoop for Spark Compatible
+wget https://dlcdn.apache.org/hadoop/common/hadoop-3.2.3/hadoop-3.2.3.tar.gz  
+tar -zxvf hadoop-3.2.3.tar.gz 
+
+find Java
+type -p javac|xargs readlink -f|xargs dirname|xargs dirname
+/usr/lib/jvm/java-8-openjdk-amd64
+
+vi hadoop-3.2.3/etc/hadoop/hadoop-env.sh
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_HOME=/home/ubuntu/hadoop-3.2.3
+
+vi .bashrc
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export HADOOP_HOME=/home/ubuntu/hadoop-3.2.3
+export SPARK_HOME=/home/ubuntu/spark-3.4.0-bin-hadoop3
+export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$SPARK_HOME/bin:$PATH
+
+To exit vi, use ESC + :wq! (wq stands for write and quit, the explanation point is to force it)
+
+--set source
+source .bashrc
+
+validate the java and hadoop version
+
+4)
+Spark
+wget https://archive.apache.org/dist/spark/spark-3.4.0/spark-3.4.0-bin-hadoop3.tgz  
+tar -xvf spark-3.4.0-bin-hadoop3.tgz 
+
+wget https://archive.apache.org/dist/spark/spark-2.4.6/spark-2.4.6-bin-hadoop2.7.tgz 
+
+go to spark-conf
+copy template
+cp spark-env-template.sh spark-env.sh
+vi spark-env.sh
+set java home
+
+#validate spark/bin/pyspark shell
+
+#validate service [Master & Worker] starting by sbin/start-all.sh
+
+If any error while starting master/worker like permission denied due to ssh
+run below command
+1) Generate
+ssh-keygen -t rsa -C "MyEmailAddress" -f ~/.ssh/id_rsa -P ""
+2) Load
+cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+
+
+4)
+Cassandra
+https://archive.apache.org/dist/cassandra/3.8/apache-cassandra-3.8-bin.tar.gz  
+tar -xvf apache-cassandra-3.8-bin.tar.gz  
+
+or
+
+wget https://archive.apache.org/dist/cassandra/3.11.13/apache-cassandra-3.11.13-bin.tar.gz
+tar -zxvf apache-cassandra-3.11.13-bin.tar.gz
+
+to start cassandra service with nohup
+navigate to cassandra folder
+-- type below command
+nohup bin/cassandra -f & [then do double enter]
+
+//to open log file
+vi nohup.out
+or
+tail -f nohup.out
+
+// to start the cassandra shell
+bin/cqlsh
+
+-- to view databases or keyspaces
+select * from system_schema.keyspaces;
+CREATE KEYSPACE mobapp WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
+DESCRIBE KEYSPACE mobapp ;
+
+CREATE TABLE appinfo (sno int,appName varchar , userName varchar , gender varchar ,PRIMARY KEY (sno));
+DESCRIBE TABLE appinfo; 
+insert into appinfo (sno, appName, userName, gender) values (1, 'mob', 'harish', 'm');
+select * from appinfo;
+
+5) 
+Kafka
+wget https://archive.apache.org/dism t/kafka/3.4.0/kafka-3.4.0-src.tgz
+tar -zxvf kafka-3.4.0-src.tgz
+wget https://downloads.apache.org/kafka/3.4.0/kafka_2.12-3.4.0.tgz
+tar -zxvf kafka_2.12-3.4.0.tgz
+
+Start Kafka
+
+Switch to Kafka Folder
+Run Zookeeper
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties >> nohup.out &
+
+If error due to port reuse 2181
+
+try
+sudo lsof -i :2181
+
+see the pid using this 2181
+
+COMMAND   PID      USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+java     1005      ubun   33u  IPv6  17209      0t0  TCP *:2181 (LISTEN)
+
+kill that
+sudo kill -9 8291
+
+then start again, it will work.
+
+validate by checking jps
+QuorumPeerMain will be available
+
+Start Kafka
+nohup bin/kafka-server-start.sh config/server.properties >> nohup.out &
+
+
+---------------------------------------------------------------------------
+
+Steps to Start Working on Project
+
+1) Start Spark Master and Worker Nodes
+
+cd Spark
+sbin/start-all.sh
+validate master and worker started using 'jps'
+1136 Worker
+1009 Master
+
+2) Start Kafka Zookeeper and Kafka Server
+
+cd Kafka
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties >> nohup.out &
+nohup bin/kafka-server-start.sh config/server.properties >> nohup.out &
+validate Zookeeper [QuorumPeerMain] and Kafka started using 'jps'
+1136 Worker
+1009 Master
+2102 Jps
+1718 Kafka
+1336 QuorumPeerMain
+
+Create Topic --bootstrap-server
+bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic mytopic
+
+List All Topics
+bin/kafka-topics.sh --list --bootstrap-server localhost:9092
+
+Create Producer
+bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic mytopic
+
+Consumer
+bin/kafka-console-consumer.sh --bootstrap-server localhost:9092  --topic mytopic --from-beginning
+
+3) Start Cassandra
+
+cd Cassandra
+
+nohup bin/cassandra -f &
+validate by checking bin/cqlsh
+Cassandra shell will be started
+
+-- create database
+create keyspace sparkdata with replication ={'class':'SimpleStrategy','replication_factor':1};
+use sparkdata;
+
+-- create table
+CREATE TABLE cust_data (fname text , lname text , url text,product text , cnt counter ,primary key (fname,lname,url,product));
+select * from cust_data;
+
+4)
+Connect Spark with Kafka and Cassandra
+
+His
+bin/spark-shell --packages "com.datastax.spark:spark-cassandra-connector_2.11:2.0.2","org.apache.spark:spark-streaming-kafka-0-8_2.11:2.0.0"
+spark-2.1.1-bin-hadoop2.7
+apache-cassandra-3.9
+kafka_2.11-0.9.0.0
+
+Mine
+bin/spark-shell --packages "com.datastax.spark:spark-cassandra-connector_2.11:2.4.3","org.apache.spark:spark-streaming-kafka-0-8_2.11:2.4.3"
+apache-cassandra-3.11.13  
+hadoop-3.2.3  
+kafka_2.12-3.4.0  
+spark-2.4.6-bin-hadoop2.7  
+
+
+spark.stop
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext._
+import org.apache.spark.streaming._
+import org.apache.spark.streaming.StreamingContext._
+import org.apache.spark.streaming.kafka._
+import com.datastax.spark.connector.SomeColumns
+import com.datastax.spark.connector.cql.CassandraConnector
+import com.datastax.spark.connector.streaming._
+
+
+val sparkConf = new SparkConf().setAppName("KafkaSparkStreaming").set("spark.cassandra.connection.host", "127.0.0.1")
+val ssc = new StreamingContext(sparkConf, Seconds(20))
+val topicpMap = "mytopic".split(",").map((_, 1.toInt)).toMap
+#2181 is zookeeper here
+val lines = KafkaUtils.createStream(ssc, "localhost:2181", "sparkgroup", topicpMap).map(_._2)
+
+lines.map(line => { val arr = line.split(","); (arr(0),arr(1),arr(2),arr(3),arr(4)) }).saveToCassandra("sparkdata", "cust_data", SomeColumns("fname", "lname","url","product","cnt"))
+ssc.start
+ssc.awaitTermination
+after this populate data from producer, it has to reflect on cassandra
+
+send below data to view in cassandra as  
+aws1,a,https://www.aws.com,mobile,1
+aws1,a,https://www.aws.com,mobile,1
+
+aws1,a,https://www.aws.com,mobile,2
+
+Success!

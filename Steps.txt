@@ -151,7 +151,7 @@ COMMAND   PID      USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
 java     1005      ubun   33u  IPv6  17209      0t0  TCP *:2181 (LISTEN)
 
 kill that
-sudo kill -9 8291
+sudo kill -9 1005 (nothing but pid of the service running)
 
 then start again, it will work.
 
